@@ -1,3 +1,17 @@
+{% if import_result is defined and import_result %}
+<div class="mb-4 p-3 rounded-lg text-sm
+  {% if import_result.errors %}bg-amber-50 border border-amber-200 text-amber-800
+  {% else %}bg-emerald-50 border border-emerald-200 text-emerald-700{% endif %}">
+  📥 CSV Import: <strong>{{ import_result.imported }}</strong> importiert,
+  {{ import_result.skipped }} übersprungen
+  {% if import_result.errors %}
+  <ul class="mt-1 ml-4 list-disc text-xs">
+    {% for e in import_result.errors %}<li>{{ e }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if sync_result is defined and sync_result %}
 <div class="mb-4 p-3 rounded-lg text-sm
   {% if sync_result.error %}bg-red-50 border border-red-200 text-red-700
@@ -11,6 +25,7 @@
 {% endif %}
 
 {% for acc in accounts %}
+{% if not acc.iban.startswith('PENDING-') %}
 <div class="card" style="border-left: 4px solid {{ acc.color }}">
   <div class="flex items-start justify-between">
     <div>
@@ -22,30 +37,41 @@
       {% else %}
       <p class="text-xs text-amber-500 mt-1">Noch kein Sync durchgeführt</p>
       {% endif %}
+      {% if acc.gc_account_id %}
+      <p class="text-xs text-slate-400 mt-0.5">🔗 Via GoCardless verbunden</p>
+      {% endif %}
     </div>
-    <div class="flex gap-2">
-      <button
-        hx-post="/accounts/{{ acc.id }}/sync"
-        hx-target="#account-list"
-        hx-swap="innerHTML"
-        hx-indicator="#sync-indicator-{{ acc.id }}"
-        class="btn-secondary relative">
-        <span class="htmx-indicator" id="sync-indicator-{{ acc.id }}">⏳</span>
-        🔄 Sync
-      </button>
-      <button
-        hx-post="/accounts/{{ acc.id }}/test-connection"
-        hx-target="#conn-result-{{ acc.id }}"
-        hx-swap="innerHTML"
-        class="btn-secondary">
-        🔌 Testen
-      </button>
-      <form method="post" action="/accounts/{{ acc.id }}/delete"
-            onsubmit="return confirm('Konto und alle Transaktionen löschen?')">
-        <button type="submit" class="btn-danger">🗑️</button>
+
+    <div class="flex flex-col gap-2 items-end">
+      <div class="flex gap-2">
+        {% if acc.gc_account_id %}
+        <button
+          hx-post="/accounts/{{ acc.id }}/sync"
+          hx-target="#account-list"
+          hx-swap="innerHTML"
+          class="btn-secondary text-sm">
+          🔄 Sync
+        </button>
+        {% endif %}
+        <form method="post" action="/accounts/{{ acc.id }}/delete"
+              onsubmit="return confirm('Konto und alle Transaktionen löschen?')">
+          <button type="submit" class="btn-danger text-sm">🗑️</button>
+        </form>
+      </div>
+
+      <!-- CSV Import -->
+      <form hx-post="/accounts/{{ acc.id }}/import-csv"
+            hx-target="#account-list"
+            hx-swap="innerHTML"
+            hx-encoding="multipart/form-data"
+            class="flex gap-2 items-center">
+        <label class="text-xs text-slate-500">CSV importieren:</label>
+        <input type="file" name="file" accept=".csv,.txt"
+               onchange="this.form.requestSubmit()"
+               class="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
       </form>
     </div>
   </div>
-  <div id="conn-result-{{ acc.id }}" class="mt-3"></div>
 </div>
+{% endif %}
 {% endfor %}

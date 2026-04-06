@@ -1,5 +1,5 @@
 """
-Background scheduler: auto-sync all accounts every SYNC_INTERVAL_HOURS hours.
+Background scheduler: auto-sync all GoCardless-connected accounts every N hours.
 """
 
 import logging
@@ -9,7 +9,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.database import SessionLocal
 from app.models import Account
-from app.services.fints_service import sync_account
+from app.services.gocardless_service import sync_account
 
 log = logging.getLogger(__name__)
 
@@ -22,11 +22,10 @@ def _run_sync():
     log.info("Scheduled sync starting...")
     db = SessionLocal()
     try:
-        accounts = db.query(Account).all()
+        accounts = db.query(Account).filter(Account.gc_account_id.isnot(None)).all()
         for account in accounts:
-            if account.credentials:
-                result = sync_account(account, db)
-                log.info("Synced %s: %s new transactions", account.iban, result.get("new"))
+            result = sync_account(account, db)
+            log.info("Synced %s: %s new transactions", account.iban, result.get("new"))
     except Exception:
         log.exception("Scheduled sync failed")
     finally:
@@ -37,7 +36,6 @@ def start_scheduler():
     global _scheduler
     if _scheduler is not None:
         return
-
     _scheduler = BackgroundScheduler()
     _scheduler.add_job(
         _run_sync,

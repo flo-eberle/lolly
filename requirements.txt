@@ -3,7 +3,6 @@ uvicorn[standard]==0.34.0
 sqlalchemy==2.0.40
 jinja2==3.1.6
 python-multipart==0.0.20
-fints==5.0.0
 cryptography==44.0.2
 apscheduler==3.11.0
 httpx==0.28.1
