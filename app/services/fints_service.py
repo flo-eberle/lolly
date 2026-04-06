@@ -4,6 +4,8 @@ FinTS/HBCI service for fetching transactions from easybank.
 easybank (BAWAG Group) FinTS endpoint:
   https://hbci.easybank.at/Account.asmx
 Bank code (Bankleitzahl): 14200 (easybank)
+
+Uses the `fints` package (v5+), formerly known as `python-fints`.
 """
 
 import logging
@@ -21,23 +23,59 @@ log = logging.getLogger(__name__)
 EASYBANK_FINTS_URL = "https://hbci.easybank.at/Account.asmx"
 EASYBANK_BANK_CODE = "14200"
 
+# product_id is required since fints v4.
+# Use your own registered ID or this generic test ID for self-hosted use.
+FINTS_PRODUCT_ID = "9FA6681DEC0CF3046BFC2F8A6"
 
-def _get_fints_client(cred: FintsCredential, product_id: Optional[str] = None):
-    """Create a python-fints client from stored credentials."""
-    try:
-        from fints.client import FinTS3PinTanClient
-    except ImportError:
-        raise RuntimeError("python-fints is not installed")
 
+def _make_client(cred: FintsCredential):
+    from fints.client import FinTS3PinTanClient
     pin = decrypt_pin(cred.pin_encrypted)
-    client = FinTS3PinTanClient(
+    return FinTS3PinTanClient(
         bank_identifier=cred.bank_code,
         user_id=cred.login,
         pin=pin,
         server=cred.fints_url,
-        product_id=product_id,
+        product_id=FINTS_PRODUCT_ID,
     )
-    return client
+
+
+def _parse_tx_fields(tx_data: dict) -> tuple[date | None, Decimal | None, str, str]:
+    """
+    Extract (date, amount, payee, purpose) from a fints transaction data dict.
+    Handles both MT940 and camt.052/XML fallback formats returned by fints v5.
+    """
+    # Date
+    tx_date = tx_data.get("date") or tx_data.get("entry_date") or tx_data.get("booking_date")
+    if not isinstance(tx_date, date):
+        tx_date = None
+
+    # Amount — MT940 returns an Amount namedtuple with .amount (Decimal)
+    raw_amount = tx_data.get("amount")
+    if raw_amount is None:
+        return tx_date, None, "", ""
+    if hasattr(raw_amount, "amount"):
+        amount = Decimal(str(raw_amount.amount))
+    else:
+        amount = Decimal(str(raw_amount))
+
+    # Payee
+    payee = (
+        tx_data.get("applicant_name")
+        or tx_data.get("creditor_name")
+        or tx_data.get("debtor_name")
+        or ""
+    )
+
+    # Purpose / remittance info
+    purpose = (
+        tx_data.get("purpose")
+        or tx_data.get("remittance_information")
+        or tx_data.get("additional_data")
+        or ""
+    )
+
+    return tx_date, amount, str(payee).strip(), str(purpose).strip()
 
 
 def test_connection(cred: FintsCredential) -> dict:
@@ -46,7 +84,7 @@ def test_connection(cred: FintsCredential) -> dict:
     Returns {"ok": True, "accounts": [...]} or {"ok": False, "error": "..."}.
     """
     try:
-        client = _get_fints_client(cred)
+        client = _make_client(cred)
         with client:
             sepa_accounts = client.get_sepa_accounts()
         return {
@@ -70,24 +108,14 @@ def sync_account(account: Account, db: Session) -> dict:
     if not cred:
         return {"new": 0, "error": "No FinTS credentials configured"}
 
-    # Fetch from last sync date or 90 days back
     from_date = (
-        account.last_sync.date() if account.last_sync else
-        date.today() - timedelta(days=90)
+        account.last_sync.date() if account.last_sync
+        else date.today() - timedelta(days=90)
     )
     to_date = date.today()
 
     try:
-        from fints.client import FinTS3PinTanClient
-        from fints.models import SEPAAccount
-
-        pin = decrypt_pin(cred.pin_encrypted)
-        client = FinTS3PinTanClient(
-            bank_identifier=cred.bank_code,
-            user_id=cred.login,
-            pin=pin,
-            server=cred.fints_url,
-        )
+        client = _make_client(cred)
 
         with client:
             sepa_accounts = client.get_sepa_accounts()
@@ -100,53 +128,49 @@ def sync_account(account: Account, db: Session) -> dict:
             transactions = client.get_transactions(target, start_date=from_date, end_date=to_date)
 
         new_count = 0
+        last_balance = None
+
         for tx in transactions:
-            data = tx.data
-            tx_date = data.get("date") or data.get("entry_date")
-            if not isinstance(tx_date, date):
-                tx_date = to_date
+            data = tx.data if hasattr(tx, "data") else tx
 
-            amount_raw = data.get("amount")
-            if amount_raw is None:
+            tx_date, amount, payee, purpose = _parse_tx_fields(data)
+
+            if amount is None:
                 continue
-            amount = Decimal(str(amount_raw.amount))
-
-            payee = data.get("applicant_name") or ""
-            purpose = data.get("purpose") or ""
+            if tx_date is None:
+                tx_date = to_date
 
             tx_hash = Transaction.make_hash(account.iban, tx_date, amount, purpose, payee)
 
-            exists = db.query(Transaction).filter(Transaction.tx_hash == tx_hash).first()
-            if exists:
+            if db.query(Transaction).filter(Transaction.tx_hash == tx_hash).first():
                 continue
 
-            new_tx = Transaction(
+            db.add(Transaction(
                 account_id=account.id,
                 date=tx_date,
                 amount=amount,
                 payee=payee,
                 purpose=purpose,
                 tx_hash=tx_hash,
-            )
-            db.add(new_tx)
+            ))
             new_count += 1
 
-        # Update balance from last statement
-        if transactions:
-            last_balance = transactions[-1].data.get("final_balance")
-            if last_balance is not None:
-                account.balance = Decimal(str(last_balance.amount))
+            # Track final balance from last statement
+            raw_balance = data.get("final_balance") or data.get("closing_balance")
+            if raw_balance is not None:
+                last_balance = raw_balance
+
+        if last_balance is not None:
+            bal = last_balance.amount if hasattr(last_balance, "amount") else last_balance
+            account.balance = Decimal(str(bal))
 
         from datetime import datetime
         account.last_sync = datetime.utcnow()
         db.commit()
 
-        # Run auto-categorization on new transactions
         from app.services.categorizer import categorize_uncategorized
-        categorize_uncategorized(db, account_id=account.id)
-
-        # Detect recurring payments
         from app.services.recurring import detect_recurring
+        categorize_uncategorized(db, account_id=account.id)
         detect_recurring(db, account_id=account.id)
 
         return {"new": new_count, "error": None}
