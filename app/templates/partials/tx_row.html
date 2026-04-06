@@ -1,23 +1,31 @@
-<tr id="tx-{{ tx.id }}" class="hover:bg-slate-50 transition-colors">
-  <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ tx.date.strftime('%d.%m.%Y') }}</td>
-  <td class="px-4 py-3 max-w-xs">
-    <div class="flex items-center gap-1.5">
-      {% if tx.is_recurring %}<span title="Wiederkehrend" class="text-blue-400">🔄</span>{% endif %}
+<tr id="tx-{{ tx.id }}">
+  <td class="text-base-content/60 text-xs whitespace-nowrap">{{ tx.date.strftime('%d.%m.%Y') }}</td>
+  <td class="max-w-xs">
+    <div class="flex items-start gap-1.5">
+      {% if tx.is_recurring %}
+      <span class="tooltip tooltip-right mt-0.5 shrink-0" data-tip="Wiederkehrend">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-info mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </span>
+      {% endif %}
       <div class="min-w-0">
-        <p class="font-medium text-slate-800 truncate">{{ tx.payee or '–' }}</p>
-        <p class="text-xs text-slate-400 truncate">{{ tx.purpose[:80] if tx.purpose else '' }}</p>
+        <p class="font-medium text-base-content text-sm truncate max-w-xs">{{ tx.payee or '–' }}</p>
+        {% if tx.purpose %}
+        <p class="text-xs text-base-content/40 truncate max-w-xs">{{ tx.purpose[:80] }}</p>
+        {% endif %}
         {% if tx.note %}
-        <p class="text-xs text-indigo-500 truncate">📝 {{ tx.note }}</p>
+        <p class="text-xs text-primary truncate">📝 {{ tx.note }}</p>
         {% endif %}
       </div>
     </div>
   </td>
-  <td class="px-4 py-3">
+  <td>
     <form hx-post="/transactions/{{ tx.id }}/categorize"
           hx-target="#tx-{{ tx.id }}"
           hx-swap="outerHTML">
       <select name="category_id" onchange="this.form.requestSubmit()"
-              class="border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+              class="select select-ghost select-xs w-full max-w-xs text-xs">
         <option value="">❓ Keine</option>
         {% for cat in categories %}
         <option value="{{ cat.id }}" {{ 'selected' if tx.category_id == cat.id }}>{{ cat.icon }} {{ cat.name }}</option>
@@ -25,9 +33,9 @@
       </select>
     </form>
   </td>
-  <td class="px-4 py-3 text-xs text-slate-500">{{ tx.account.name if tx.account else '–' }}</td>
-  <td class="px-4 py-3 text-right whitespace-nowrap">
-    <span class="{{ 'amount-pos' if tx.amount > 0 else 'amount-neg' }}">
+  <td class="text-xs text-base-content/50">{{ tx.account.name if tx.account else '–' }}</td>
+  <td class="text-right whitespace-nowrap">
+    <span class="{{ 'amount-pos' if tx.amount > 0 else 'amount-neg' }} text-sm">
       {{ '+' if tx.amount > 0 else '' }}{{ "%.2f"|format(tx.amount) }} €
     </span>
   </td>

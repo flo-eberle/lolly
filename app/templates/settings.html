@@ -3,98 +3,113 @@
 
 {% block content %}
 <div class="mb-6">
-  <h1 class="text-2xl font-bold text-slate-900">Einstellungen</h1>
+  <h1 class="text-2xl font-bold text-base-content">Einstellungen</h1>
 </div>
 
 {% if request.query_params.get('saved') %}
-<div class="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm">
-  ✅ Einstellungen gespeichert.
+<div class="alert alert-success shadow-sm mb-5">
+  <span class="text-sm">✅ Einstellungen gespeichert.</span>
 </div>
 {% endif %}
 
-<!-- GoCardless -->
-<div class="card mb-6">
-  <h2 class="text-base font-semibold text-slate-900 mb-1">GoCardless Bank Account Data</h2>
-  <p class="text-sm text-slate-500 mb-4">
-    PSD2-basierter Zugang zu österreichischen Banken (inkl. easybank/BAWAG).
-    Kostenloses Konto unter
-    <a href="https://bankaccountdata.gocardless.com/" target="_blank" class="text-indigo-600 hover:underline">bankaccountdata.gocardless.com</a>
-    erstellen → API Keys kopieren.
-  </p>
+<div class="space-y-5 max-w-2xl">
 
-  <form method="post" action="/settings/gocardless" class="space-y-4 max-w-lg">
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Secret ID</label>
-      <input type="text" name="secret_id"
-             value="{{ gc_settings.secret_id if gc_settings else '' }}"
-             required autocomplete="off"
-             class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300">
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Secret Key</label>
-      <input type="password" name="secret_key"
-             placeholder="{{ '••••••••••••' if gc_settings else '' }}"
-             {{ 'required' if not gc_settings else '' }}
-             autocomplete="new-password"
-             class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300">
+  <!-- GoCardless -->
+  <div class="card bg-base-200 border border-base-300 shadow-sm">
+    <div class="card-body">
+      <h2 class="card-title text-base">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+        GoCardless Bank Account Data
+      </h2>
+      <p class="text-sm text-base-content/50 mb-1">
+        PSD2-Zugang zu österreichischen Banken (inkl. easybank/BAWAG). Kostenloses Konto unter
+        <a href="https://bankaccountdata.gocardless.com/" target="_blank" class="link link-primary">bankaccountdata.gocardless.com</a>.
+      </p>
       {% if gc_settings %}
-      <p class="text-xs text-slate-400 mt-1">Leer lassen um den gespeicherten Key zu behalten.</p>
+      <div class="badge badge-success badge-sm gap-1 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+        </svg>
+        Konfiguriert
+      </div>
       {% endif %}
+      <form method="post" action="/settings/gocardless" class="space-y-3">
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium text-sm">Secret ID</span></label>
+          <input type="text" name="secret_id"
+                 value="{{ gc_settings.secret_id if gc_settings else '' }}"
+                 required autocomplete="off"
+                 class="input input-bordered input-sm font-mono">
+        </div>
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium text-sm">Secret Key</span></label>
+          <input type="password" name="secret_key"
+                 placeholder="{{ '••••••••••••' if gc_settings else '' }}"
+                 {{ 'required' if not gc_settings else '' }}
+                 autocomplete="new-password"
+                 class="input input-bordered input-sm font-mono">
+          {% if gc_settings %}
+          <label class="label"><span class="label-text-alt text-base-content/40">Leer lassen um den gespeicherten Key zu behalten.</span></label>
+          {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+      </form>
     </div>
-
-    {% if gc_settings %}
-    <div class="p-3 bg-slate-50 rounded-lg text-xs text-slate-500 space-y-1">
-      <p>✅ GoCardless konfiguriert</p>
-      {% if gc_settings.access_token_expires_at %}
-      <p>Access Token gültig bis: {{ gc_settings.access_token_expires_at.strftime('%d.%m.%Y %H:%M') }} UTC</p>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    <button type="submit" class="btn-primary">Speichern</button>
-  </form>
-</div>
-
-<!-- Change password -->
-<div class="card mb-6">
-  <h2 class="text-base font-semibold text-slate-900 mb-1">Passwort ändern</h2>
-
-  {% if pw_saved %}
-  <div class="mb-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm">✅ Passwort geändert.</div>
-  {% endif %}
-  {% if pw_error %}
-  <div class="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{{ pw_error }}</div>
-  {% endif %}
-
-  <form method="post" action="/settings/change-password" class="space-y-3 max-w-lg">
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Aktuelles Passwort</label>
-      <input type="password" name="current_password" required
-             class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Neues Passwort</label>
-      <input type="password" name="new_password" required minlength="8"
-             class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Neues Passwort wiederholen</label>
-      <input type="password" name="new_password2" required minlength="8"
-             class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-    </div>
-    <button type="submit" class="btn-primary">Passwort ändern</button>
-  </form>
-</div>
-
-<!-- APP_URL hint -->
-<div class="card">
-  <h2 class="text-base font-semibold text-slate-900 mb-1">App-URL (für GoCardless Callback)</h2>
-  <p class="text-sm text-slate-500 mb-2">
-    GoCardless leitet den Browser nach der Bank-Autorisierung hierher zurück.
-    Setze die <code class="bg-slate-100 px-1 rounded">APP_URL</code> Umgebungsvariable wenn du Lolly nicht lokal betreibst.
-  </p>
-  <div class="bg-slate-50 rounded-lg p-3 text-xs font-mono text-slate-600">
-    APP_URL={{ request.base_url.scheme }}://{{ request.base_url.netloc }}
   </div>
+
+  <!-- Change password -->
+  <div class="card bg-base-200 border border-base-300 shadow-sm">
+    <div class="card-body">
+      <h2 class="card-title text-base">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+        </svg>
+        Passwort ändern
+      </h2>
+      {% if pw_saved is defined and pw_saved %}
+      <div class="alert alert-success alert-sm py-2 text-sm mb-3">✅ Passwort geändert.</div>
+      {% endif %}
+      {% if pw_error is defined and pw_error %}
+      <div class="alert alert-error alert-sm py-2 text-sm mb-3">{{ pw_error }}</div>
+      {% endif %}
+      <form method="post" action="/settings/change-password" class="space-y-3">
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium text-sm">Aktuelles Passwort</span></label>
+          <input type="password" name="current_password" required class="input input-bordered input-sm">
+        </div>
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium text-sm">Neues Passwort</span></label>
+          <input type="password" name="new_password" required minlength="8" class="input input-bordered input-sm">
+        </div>
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium text-sm">Neues Passwort wiederholen</span></label>
+          <input type="password" name="new_password2" required minlength="8" class="input input-bordered input-sm">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Passwort ändern</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- APP_URL -->
+  <div class="card bg-base-200 border border-base-300 shadow-sm">
+    <div class="card-body">
+      <h2 class="card-title text-base">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+        </svg>
+        App-URL
+      </h2>
+      <p class="text-sm text-base-content/50 mb-2">
+        GoCardless leitet nach der Bank-Autorisierung hierher zurück.
+        Setze <code class="kbd kbd-xs">APP_URL</code> in der Umgebung wenn du Lolly remote betreibst.
+      </p>
+      <div class="mockup-code text-xs py-2">
+        <pre><code>APP_URL={{ request.base_url.scheme }}://{{ request.base_url.netloc }}</code></pre>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

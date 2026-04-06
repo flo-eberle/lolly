@@ -3,38 +3,40 @@
 
 {% block content %}
 <div class="max-w-lg mx-auto mt-8">
-  <div class="card text-center">
-    {% if linked %}
-    <p class="text-5xl mb-4">🎉</p>
-    <h1 class="text-xl font-bold text-slate-900 mb-2">
-      {{ linked|length }} Konto{{ 'en' if linked|length != 1 else '' }} erfolgreich verbunden!
-    </h1>
-    <div class="text-left space-y-2 my-4">
-      {% for item in linked %}
-      <div class="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
-        <div>
-          <p class="font-medium text-slate-800">{{ item.account.name }}</p>
-          <p class="text-xs text-slate-500 font-mono">{{ item.account.iban }}</p>
+  <div class="card bg-base-200 border border-base-300 shadow-sm text-center">
+    <div class="card-body py-10">
+      {% if linked %}
+      <div class="text-5xl mb-3">🎉</div>
+      <h1 class="text-xl font-bold text-base-content">
+        {{ linked|length }} Konto{{ 'en' if linked|length != 1 else '' }} verbunden!
+      </h1>
+      <div class="space-y-2 my-5 text-left">
+        {% for item in linked %}
+        <div class="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-xl">
+          <div>
+            <p class="font-semibold text-base-content text-sm">{{ item.account.name }}</p>
+            <p class="font-mono text-xs text-base-content/40">{{ item.account.iban }}</p>
+          </div>
+          <span class="badge badge-success badge-sm">+{{ item.new_txs }} Buchungen</span>
         </div>
-        <span class="text-sm text-emerald-700 font-medium">+{{ item.new_txs }} Buchungen</span>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <p class="text-5xl mb-4">⏳</p>
-    <h1 class="text-xl font-bold text-slate-900 mb-2">Autorisierung wird verarbeitet…</h1>
-    <p class="text-sm text-slate-500">Es kann einen Moment dauern bis die Bank die Verbindung bestätigt.</p>
-    {% endif %}
+      {% else %}
+      <div class="text-5xl mb-3">⏳</div>
+      <h1 class="text-xl font-bold text-base-content">Autorisierung wird verarbeitet…</h1>
+      <p class="text-sm text-base-content/50 mt-1">Es kann einen Moment dauern bis die Bank die Verbindung bestätigt.</p>
+      {% endif %}
 
-    {% if errors %}
-    <div class="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm text-left">
-      {% for e in errors %}<p>❌ {{ e }}</p>{% endfor %}
-    </div>
-    {% endif %}
+      {% if errors %}
+      <div class="alert alert-error text-sm text-left mt-3">
+        {% for e in errors %}<p>❌ {{ e }}</p>{% endfor %}
+      </div>
+      {% endif %}
 
-    <div class="flex gap-3 justify-center mt-6">
-      <a href="/accounts/" class="btn-secondary">← Konten</a>
-      <a href="/" class="btn-primary">Dashboard →</a>
+      <div class="flex gap-3 justify-center mt-4">
+        <a href="/accounts/" class="btn btn-ghost btn-sm">← Konten</a>
+        <a href="/" class="btn btn-primary btn-sm">Dashboard →</a>
+      </div>
     </div>
   </div>
 </div>

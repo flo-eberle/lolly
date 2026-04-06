@@ -1,42 +1,50 @@
 <!DOCTYPE html>
-<html lang="de" class="h-full bg-slate-50">
+<html lang="de" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einrichtung – Lolly</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    (function () {
+      const t = localStorage.getItem('lolly-theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
 </head>
-<body class="h-full flex items-center justify-center">
-  <div class="w-full max-w-sm">
+<body class="min-h-screen flex items-center justify-center bg-base-200">
+  <div class="w-full max-w-sm px-4">
+
     <div class="text-center mb-8">
-      <span class="text-5xl">🍭</span>
-      <h1 class="text-2xl font-bold text-slate-900 mt-3">Willkommen bei Lolly</h1>
-      <p class="text-slate-500 text-sm mt-1">Richte ein Passwort ein um zu starten.</p>
+      <div class="text-6xl mb-3">🍭</div>
+      <h1 class="text-3xl font-bold text-base-content">Willkommen bei Lolly</h1>
+      <p class="text-base-content/40 text-sm mt-1">Richte ein Passwort ein um zu starten.</p>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-      {% if error %}
-      <div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-        {{ error }}
-      </div>
-      {% endif %}
+    <div class="card bg-base-100 shadow-lg border border-base-300">
+      <div class="card-body gap-4">
 
-      <form method="post" action="/setup" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Passwort</label>
-          <input type="password" name="password" required autofocus minlength="8"
-                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-          <p class="text-xs text-slate-400 mt-1">Mindestens 8 Zeichen.</p>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Passwort wiederholen</label>
-          <input type="password" name="password2" required minlength="8"
-                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-        </div>
-        <button type="submit" class="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 transition-colors">
-          Passwort festlegen & starten
-        </button>
-      </form>
+        {% if error %}
+        <div class="alert alert-error py-2 text-sm">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/setup" class="space-y-4">
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Passwort</span></label>
+            <input type="password" name="password" required autofocus minlength="8"
+                   class="input input-bordered w-full">
+            <label class="label"><span class="label-text-alt text-base-content/40">Mindestens 8 Zeichen</span></label>
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Passwort wiederholen</span></label>
+            <input type="password" name="password2" required minlength="8"
+                   class="input input-bordered w-full">
+          </div>
+          <button type="submit" class="btn btn-primary w-full">Passwort festlegen & starten</button>
+        </form>
+      </div>
     </div>
   </div>
 </body>
