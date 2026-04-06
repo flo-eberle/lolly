@@ -82,67 +82,119 @@ def gc_connect(
 
 
 # ---------------------------------------------------------------------------
-# GoCardless: callback after bank authorization
+# GoCardless: callback — show account selection
 # ---------------------------------------------------------------------------
 
 @router.get("/gc-callback", response_class=HTMLResponse)
-def gc_callback(
-    request: Request,
-    ref: str | None = None,
-    db: Session = Depends(get_db),
-):
+def gc_callback(request: Request, db: Session = Depends(get_db)):
     """
-    GoCardless redirects here after the user completes bank authorization.
-    The `ref` param contains the requisition reference we set.
-    We match it to our pending account and fetch the real IBAN.
+    GoCardless redirects here after bank authorization.
+    Fetch all accounts from the requisition and let the user pick which to add.
     """
-    # Find accounts still pending (IBAN starts with PENDING-)
     pending = db.query(Account).filter(Account.iban.like("PENDING-%")).all()
 
-    linked = []
+    available_accounts = []
+    requisition_id = None
     errors = []
 
     for account in pending:
         req_id = account.gc_requisition_id
         if not req_id:
             continue
+        requisition_id = req_id
         try:
             requisition = gc.get_requisition(db, req_id)
             gc_account_ids = requisition.get("accounts", [])
+
             if not gc_account_ids:
+                errors.append("Die Bank hat noch keine Konten freigegeben. Bitte warte einen Moment und lade die Seite neu.")
                 continue
 
-            # Use first account from the requisition
-            gc_account_id = gc_account_ids[0]
-            details = gc.get_account_details(db, gc_account_id)
-            account_detail = details.get("account", details)
+            existing_ibans = {
+                a.iban for a in db.query(Account).filter(~Account.iban.like("PENDING-%")).all()
+            }
 
-            iban = account_detail.get("iban") or account_detail.get("resourceId", gc_account_id)
-            owner = account_detail.get("ownerName", "")
+            for gc_id in gc_account_ids:
+                try:
+                    details = gc.get_account_details(db, gc_id)
+                    acct = details.get("account", details)
+                    iban = acct.get("iban", "")
+                    available_accounts.append({
+                        "gc_id": gc_id,
+                        "iban": iban,
+                        "owner": acct.get("ownerName", ""),
+                        "product": acct.get("product", ""),
+                        "already_added": iban in existing_ibans,
+                        "suggested_name": acct.get("product") or acct.get("ownerName") or "Konto",
+                    })
+                except Exception as e:
+                    log.warning("Could not fetch details for gc account %s: %s", gc_id, e)
 
-            # Check if IBAN already exists (different account)
-            existing = db.query(Account).filter(
-                Account.iban == iban,
-                Account.id != account.id,
-            ).first()
+        except Exception as e:
+            log.exception("gc-callback failed")
+            errors.append(str(e))
+
+    return templates.TemplateResponse("accounts_gc_select.html", {
+        "request": request,
+        "available_accounts": available_accounts,
+        "requisition_id": requisition_id,
+        "errors": errors,
+    })
+
+
+# ---------------------------------------------------------------------------
+# GoCardless: confirm account selection
+# ---------------------------------------------------------------------------
+
+@router.post("/gc-confirm", response_class=HTMLResponse)
+async def gc_confirm(request: Request, db: Session = Depends(get_db)):
+    """
+    User submits the account selection form.
+    Creates Account records for selected accounts and runs initial sync.
+    """
+    form = await request.form()
+    requisition_id = form.get("requisition_id")
+    selected_gc_ids = form.getlist("gc_ids")
+
+    linked = []
+    errors = []
+
+    # Clean up all pending placeholder accounts for this requisition
+    pending = db.query(Account).filter(Account.iban.like("PENDING-%")).all()
+    for p in pending:
+        if p.gc_requisition_id == requisition_id:
+            db.delete(p)
+    db.commit()
+
+    for gc_id in selected_gc_ids:
+        name = form.get(f"name_{gc_id}", "").strip() or "Konto"
+        try:
+            details = gc.get_account_details(db, gc_id)
+            acct = details.get("account", details)
+            iban = acct.get("iban") or acct.get("resourceId", gc_id)
+
+            existing = db.query(Account).filter(Account.iban == iban).first()
             if existing:
-                db.delete(account)
-                db.commit()
                 errors.append(f"IBAN {iban} ist bereits vorhanden.")
                 continue
 
-            account.iban = iban
-            account.gc_account_id = gc_account_id
-            if owner and not account.name:
-                account.name = owner
+            color = ACCOUNT_COLORS[db.query(Account).count() % len(ACCOUNT_COLORS)]
+            account = Account(
+                name=name,
+                iban=iban,
+                color=color,
+                gc_account_id=gc_id,
+                gc_requisition_id=requisition_id,
+            )
+            db.add(account)
             db.commit()
+            db.refresh(account)
 
-            # Initial sync
             result = sync_account(account, db)
             linked.append({"account": account, "new_txs": result.get("new", 0)})
 
         except Exception as e:
-            log.exception("gc-callback failed for account %s", account.id)
+            log.exception("gc-confirm failed for gc_id %s", gc_id)
             errors.append(str(e))
 
     return templates.TemplateResponse("accounts_gc_callback.html", {
