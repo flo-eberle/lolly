@@ -12,9 +12,26 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(name)s  %(messa
 log = logging.getLogger(__name__)
 
 
+def _run_migrations():
+    """Add columns introduced in later versions to existing tables."""
+    migrations = [
+        "ALTER TABLE accounts ADD COLUMN gc_account_id VARCHAR",
+        "ALTER TABLE accounts ADD COLUMN gc_requisition_id VARCHAR",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(__import__("sqlalchemy").text(sql))
+                conn.commit()
+                log.info("Migration applied: %s", sql)
+            except Exception:
+                pass  # Column already exists — safe to ignore
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
     log.info("Database tables created / verified")
 
     from app.database import SessionLocal
