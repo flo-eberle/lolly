@@ -77,6 +77,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Lolly", lifespan=lifespan)
 
+app.add_middleware(AuthMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.environ.get("SECRET_KEY", "change-me-in-production-please"),
@@ -84,7 +85,6 @@ app.add_middleware(
     max_age=60 * 60 * 24 * 30,  # 30 days
     https_only=False,
 )
-app.add_middleware(AuthMiddleware)
 
 app.include_router(auth_router)
 app.include_router(dashboard.router)
