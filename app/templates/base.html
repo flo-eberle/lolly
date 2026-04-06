@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Lolly{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    [x-cloak] { display: none; }
+    .nav-link { @apply flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-medium; }
+    .nav-link.active { @apply bg-slate-700 text-white; }
+    .card { @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-5; }
+    .btn { @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-sm transition-colors; }
+    .btn-primary { @apply btn bg-indigo-600 text-white hover:bg-indigo-700; }
+    .btn-secondary { @apply btn bg-slate-100 text-slate-700 hover:bg-slate-200; }
+    .btn-danger { @apply btn bg-red-50 text-red-600 hover:bg-red-100; }
+    .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
+    .amount-pos { @apply text-emerald-600 font-semibold; }
+    .amount-neg { @apply text-red-500 font-semibold; }
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+    .htmx-request.htmx-indicator { display: inline; }
+  </style>
+</head>
+<body class="h-full bg-slate-50 flex">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-slate-900 flex flex-col flex-shrink-0 h-screen sticky top-0">
+    <div class="px-4 py-5 border-b border-slate-700">
+      <span class="text-white font-bold text-xl tracking-tight">🍭 Lolly</span>
+      <p class="text-slate-400 text-xs mt-0.5">Personal Finance</p>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+        <span>📊</span> Dashboard
+      </a>
+      <a href="/transactions/" class="nav-link {% if '/transactions' in request.url.path %}active{% endif %}">
+        <span>💸</span> Transaktionen
+      </a>
+      <a href="/accounts/" class="nav-link {% if '/accounts' in request.url.path %}active{% endif %}">
+        <span>🏦</span> Konten
+      </a>
+      <a href="/categories/" class="nav-link {% if '/categories' in request.url.path %}active{% endif %}">
+        <span>🏷️</span> Kategorien
+      </a>
+    </nav>
+    <div class="px-4 py-3 border-t border-slate-700">
+      <p class="text-slate-500 text-xs">Lolly v0.1</p>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-y-auto">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</body>
+</html>

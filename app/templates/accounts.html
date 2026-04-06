@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Konten – Lolly{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-slate-900">Konten</h1>
+  <button onclick="document.getElementById('add-modal').classList.remove('hidden')" class="btn-primary">
+    + Konto hinzufügen
+  </button>
+</div>
+
+{% if error %}
+<div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{{ error }}</div>
+{% endif %}
+
+<!-- Account Cards -->
+<div id="account-list" class="space-y-4">
+  {% include "partials/account_list.html" %}
+</div>
+
+{% if not accounts %}
+<div class="card text-center py-16">
+  <p class="text-4xl mb-3">🏦</p>
+  <p class="text-slate-600 font-medium mb-2">Noch kein Konto konfiguriert</p>
+  <p class="text-slate-400 text-sm">Klick auf "Konto hinzufügen" um easybank per FinTS zu verbinden.</p>
+</div>
+{% endif %}
+
+<!-- Add Account Modal -->
+<div id="add-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-lg font-bold text-slate-900">Konto hinzufügen</h2>
+      <button onclick="document.getElementById('add-modal').classList.add('hidden')"
+              class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+    </div>
+
+    <form method="post" action="/accounts/add" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Kontoname</label>
+          <input type="text" name="name" required placeholder="z.B. Girokonto easybank"
+                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">IBAN</label>
+          <input type="text" name="iban" required placeholder="AT12 1234 5678 9012 3456"
+                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">FinTS-URL</label>
+          <input type="text" name="fints_url" value="{{ easybank_url }}"
+                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          <p class="text-xs text-slate-400 mt-1">Vorausgefüllt für easybank (BAWAG-Gruppe)</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Bankleitzahl</label>
+          <input type="text" name="bank_code" value="{{ easybank_blz }}"
+                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Online-Banking Benutzer</label>
+          <input type="text" name="login" required autocomplete="off"
+                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">PIN / Passwort</label>
+          <input type="password" name="pin" required autocomplete="new-password"
+                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          <p class="text-xs text-slate-400 mt-1">🔒 Wird verschlüsselt lokal gespeichert.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('add-modal').classList.add('hidden')"
+                class="btn-secondary">Abbrechen</button>
+        <button type="submit" class="btn-primary">Konto speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

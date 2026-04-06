@@ -1,0 +1,51 @@
+{% if sync_result is defined and sync_result %}
+<div class="mb-4 p-3 rounded-lg text-sm
+  {% if sync_result.error %}bg-red-50 border border-red-200 text-red-700
+  {% else %}bg-emerald-50 border border-emerald-200 text-emerald-700{% endif %}">
+  {% if sync_result.error %}
+    ❌ Sync fehlgeschlagen: {{ sync_result.error }}
+  {% else %}
+    ✅ Sync abgeschlossen: {{ sync_result.new }} neue Buchung{{ 'en' if sync_result.new != 1 else '' }} importiert.
+  {% endif %}
+</div>
+{% endif %}
+
+{% for acc in accounts %}
+<div class="card" style="border-left: 4px solid {{ acc.color }}">
+  <div class="flex items-start justify-between">
+    <div>
+      <h3 class="font-semibold text-slate-900">{{ acc.name }}</h3>
+      <p class="text-slate-500 font-mono text-sm mt-0.5">{{ acc.iban }}</p>
+      <p class="text-2xl font-bold text-slate-900 mt-2">{{ "%.2f"|format(acc.balance or 0) }} €</p>
+      {% if acc.last_sync %}
+      <p class="text-xs text-slate-400 mt-1">Letzter Sync: {{ acc.last_sync.strftime('%d.%m.%Y %H:%M') }} Uhr</p>
+      {% else %}
+      <p class="text-xs text-amber-500 mt-1">Noch kein Sync durchgeführt</p>
+      {% endif %}
+    </div>
+    <div class="flex gap-2">
+      <button
+        hx-post="/accounts/{{ acc.id }}/sync"
+        hx-target="#account-list"
+        hx-swap="innerHTML"
+        hx-indicator="#sync-indicator-{{ acc.id }}"
+        class="btn-secondary relative">
+        <span class="htmx-indicator" id="sync-indicator-{{ acc.id }}">⏳</span>
+        🔄 Sync
+      </button>
+      <button
+        hx-post="/accounts/{{ acc.id }}/test-connection"
+        hx-target="#conn-result-{{ acc.id }}"
+        hx-swap="innerHTML"
+        class="btn-secondary">
+        🔌 Testen
+      </button>
+      <form method="post" action="/accounts/{{ acc.id }}/delete"
+            onsubmit="return confirm('Konto und alle Transaktionen löschen?')">
+        <button type="submit" class="btn-danger">🗑️</button>
+      </form>
+    </div>
+  </div>
+  <div id="conn-result-{{ acc.id }}" class="mt-3"></div>
+</div>
+{% endfor %}

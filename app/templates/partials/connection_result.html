@@ -1,0 +1,14 @@
+{% if result.ok %}
+<div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm">
+  ✅ Verbindung erfolgreich! Gefundene Konten:
+  <ul class="mt-1 ml-4 list-disc">
+    {% for a in result.accounts %}
+    <li class="font-mono text-xs">{{ a.iban }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% else %}
+<div class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+  ❌ Verbindung fehlgeschlagen: {{ result.error }}
+</div>
+{% endif %}

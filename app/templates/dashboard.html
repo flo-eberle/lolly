@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – Lolly{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+  <p class="text-slate-500 text-sm mt-1">{{ today.strftime('%B %Y') }}</p>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="card">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Gesamtguthaben</p>
+    <p class="text-2xl font-bold text-slate-900 mt-1">{{ "%.2f"|format(total_balance) }} €</p>
+    <p class="text-xs text-slate-400 mt-1">{{ accounts|length }} Konto{{ 'en' if accounts|length != 1 else '' }}</p>
+  </div>
+  <div class="card">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Einnahmen (Monat)</p>
+    <p class="text-2xl font-bold text-emerald-600 mt-1">+{{ "%.2f"|format(income_month) }} €</p>
+  </div>
+  <div class="card">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Ausgaben (Monat)</p>
+    <p class="text-2xl font-bold text-red-500 mt-1">{{ "%.2f"|format(expenses_month) }} €</p>
+  </div>
+  <div class="card">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Unkategorisiert</p>
+    <p class="text-2xl font-bold {{ 'text-amber-500' if uncategorized_count > 0 else 'text-slate-400' }} mt-1">{{ uncategorized_count }}</p>
+    {% if uncategorized_count > 0 %}
+    <a href="/transactions/?category_id=0" class="text-xs text-indigo-600 hover:underline">Jetzt kategorisieren →</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Account balances -->
+{% if accounts %}
+<div class="flex gap-3 mb-6 flex-wrap">
+  {% for acc in accounts %}
+  <div class="card flex-1 min-w-48" style="border-left: 4px solid {{ acc.color }}">
+    <p class="text-xs font-medium text-slate-500">{{ acc.name }}</p>
+    <p class="text-lg font-bold text-slate-900 mt-0.5">{{ "%.2f"|format(acc.balance or 0) }} €</p>
+    <p class="text-xs text-slate-400 font-mono">{{ acc.iban[-4:] and '···· ' + acc.iban[-4:] }}</p>
+    {% if acc.last_sync %}
+    <p class="text-xs text-slate-400 mt-1">Sync: {{ acc.last_sync.strftime('%d.%m. %H:%M') }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card mb-6 text-center py-10">
+  <p class="text-slate-400 text-4xl mb-3">🏦</p>
+  <p class="text-slate-600 font-medium">Noch kein Konto hinzugefügt</p>
+  <a href="/accounts/" class="btn-primary mt-4 inline-flex">Konto hinzufügen</a>
+</div>
+{% endif %}
+
+<!-- Charts -->
+{% if accounts %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="card lg:col-span-2">
+    <h2 class="text-sm font-semibold text-slate-700 mb-4">Einnahmen & Ausgaben (6 Monate)</h2>
+    <canvas id="barChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <h2 class="text-sm font-semibold text-slate-700 mb-4">Ausgaben nach Kategorie</h2>
+    {% if cat_labels %}
+    <canvas id="donutChart" height="220"></canvas>
+    {% else %}
+    <p class="text-slate-400 text-sm text-center pt-10">Noch keine Ausgaben diesen Monat</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Recurring & Recent Transactions -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Recurring -->
+  <div class="card">
+    <h2 class="text-sm font-semibold text-slate-700 mb-4">🔄 Wiederkehrende Zahlungen</h2>
+    {% if recurring %}
+    <div class="space-y-2">
+      {% for tx in recurring %}
+      <div class="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-slate-800 truncate">{{ tx.payee or tx.purpose[:40] }}</p>
+          <p class="text-xs text-slate-400 truncate">{{ tx.purpose[:50] }}</p>
+        </div>
+        <span class="amount-neg text-sm ml-3 flex-shrink-0">{{ "%.2f"|format(tx.amount) }} €</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-slate-400 text-sm">Noch keine erkannten Abos. Mehr Daten werden nach dem ersten Sync sichtbar.</p>
+    {% endif %}
+  </div>
+
+  <!-- Recent Transactions -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-slate-700">Letzte Buchungen</h2>
+      <a href="/transactions/" class="text-xs text-indigo-600 hover:underline">Alle →</a>
+    </div>
+    {% if recent_txs %}
+    <div class="space-y-2">
+      {% for tx in recent_txs %}
+      <div class="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-slate-800 truncate">{{ tx.payee or '–' }}</p>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span class="text-xs text-slate-400">{{ tx.date.strftime('%d.%m.%Y') }}</span>
+            {% if tx.category %}
+            <span class="badge text-white text-xs" style="background:{{ tx.category.color }}">{{ tx.category.icon }} {{ tx.category.name }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <span class="{{ 'amount-pos' if tx.amount > 0 else 'amount-neg' }} text-sm ml-3 flex-shrink-0">
+          {{ '+' if tx.amount > 0 else '' }}{{ "%.2f"|format(tx.amount) }} €
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-slate-400 text-sm">Noch keine Transaktionen. Sync starten unter <a href="/accounts/" class="text-indigo-600 hover:underline">Konten</a>.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if accounts %}
+<script>
+const barCtx = document.getElementById('barChart').getContext('2d');
+new Chart(barCtx, {
+  type: 'bar',
+  data: {
+    labels: {{ bar_labels | tojson }},
+    datasets: [
+      {
+        label: 'Einnahmen',
+        data: {{ bar_income | tojson }},
+        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+        borderRadius: 6,
+      },
+      {
+        label: 'Ausgaben',
+        data: {{ bar_expenses | tojson }},
+        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+        borderRadius: 6,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom' } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+{% if cat_labels %}
+const donutCtx = document.getElementById('donutChart').getContext('2d');
+new Chart(donutCtx, {
+  type: 'doughnut',
+  data: {
+    labels: {{ cat_labels | tojson }},
+    datasets: [{
+      data: {{ cat_values | tojson }},
+      backgroundColor: {{ cat_bg_colors | tojson }},
+      borderWidth: 2,
+      borderColor: '#fff',
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.parsed.toFixed(2)} €`
+        }
+      }
+    }
+  }
+});
+{% endif %}
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Transaktionen – Lolly{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Transaktionen</h1>
+    <p class="text-slate-500 text-sm mt-1">{{ total }} Buchungen</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <form method="get" action="/transactions/" class="flex flex-wrap gap-3 items-end">
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Suche</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Payee oder Verwendungszweck…"
+             class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Konto</label>
+      <select name="account_id" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        <option value="">Alle</option>
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}" {{ 'selected' if selected_account == acc.id }}>{{ acc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Kategorie</label>
+      <select name="category_id" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        <option value="">Alle</option>
+        <option value="0" {{ 'selected' if selected_category == 0 }}>❓ Unkategorisiert</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {{ 'selected' if selected_category == cat.id }}>{{ cat.icon }} {{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Monat</label>
+      <input type="month" name="month" value="{{ month }}"
+             class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+    </div>
+    <button type="submit" class="btn-primary">Filtern</button>
+    <a href="/transactions/" class="btn-secondary">Zurücksetzen</a>
+  </form>
+</div>
+
+<!-- Transaction Table -->
+<div class="card overflow-hidden p-0">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-slate-50 text-left border-b border-slate-100">
+          <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Datum</th>
+          <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Payee / Verwendung</th>
+          <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Kategorie</th>
+          <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Konto</th>
+          <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Betrag</th>
+        </tr>
+      </thead>
+      <tbody id="tx-table-body" class="divide-y divide-slate-50">
+        {% for tx in transactions %}
+        {% include "partials/tx_row.html" %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if not transactions %}
+    <div class="text-center py-16 text-slate-400">
+      <p class="text-3xl mb-3">🔍</p>
+      <p>Keine Transaktionen gefunden.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="flex items-center justify-center gap-2 mt-4">
+  {% if page > 1 %}
+  <a href="?page={{ page - 1 }}&q={{ q }}&account_id={{ selected_account or '' }}&category_id={{ selected_category or '' }}&month={{ month }}"
+     class="btn-secondary">← Zurück</a>
+  {% endif %}
+  <span class="text-sm text-slate-500">Seite {{ page }} von {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="?page={{ page + 1 }}&q={{ q }}&account_id={{ selected_account or '' }}&category_id={{ selected_category or '' }}&month={{ month }}"
+     class="btn-secondary">Weiter →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

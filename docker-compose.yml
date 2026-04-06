@@ -1,0 +1,16 @@
+services:
+  lolly:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - lolly_data:/data
+    environment:
+      # Generate your key: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      SECRET_KEY: "change-me-before-first-run"
+      # How often to auto-sync accounts (in hours)
+      SYNC_INTERVAL_HOURS: "6"
+    restart: unless-stopped
+
+volumes:
+  lolly_data:

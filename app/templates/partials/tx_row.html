@@ -1,0 +1,34 @@
+<tr id="tx-{{ tx.id }}" class="hover:bg-slate-50 transition-colors">
+  <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ tx.date.strftime('%d.%m.%Y') }}</td>
+  <td class="px-4 py-3 max-w-xs">
+    <div class="flex items-center gap-1.5">
+      {% if tx.is_recurring %}<span title="Wiederkehrend" class="text-blue-400">🔄</span>{% endif %}
+      <div class="min-w-0">
+        <p class="font-medium text-slate-800 truncate">{{ tx.payee or '–' }}</p>
+        <p class="text-xs text-slate-400 truncate">{{ tx.purpose[:80] if tx.purpose else '' }}</p>
+        {% if tx.note %}
+        <p class="text-xs text-indigo-500 truncate">📝 {{ tx.note }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </td>
+  <td class="px-4 py-3">
+    <form hx-post="/transactions/{{ tx.id }}/categorize"
+          hx-target="#tx-{{ tx.id }}"
+          hx-swap="outerHTML">
+      <select name="category_id" onchange="this.form.requestSubmit()"
+              class="border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+        <option value="">❓ Keine</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {{ 'selected' if tx.category_id == cat.id }}>{{ cat.icon }} {{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </td>
+  <td class="px-4 py-3 text-xs text-slate-500">{{ tx.account.name if tx.account else '–' }}</td>
+  <td class="px-4 py-3 text-right whitespace-nowrap">
+    <span class="{{ 'amount-pos' if tx.amount > 0 else 'amount-neg' }}">
+      {{ '+' if tx.amount > 0 else '' }}{{ "%.2f"|format(tx.amount) }} €
+    </span>
+  </td>
+</tr>
