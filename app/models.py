@@ -9,6 +9,14 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+class AppSettings(Base):
+    """Single-row table for app-wide settings (password hash, etc.)."""
+    __tablename__ = "app_settings"
+
+    id = Column(Integer, primary_key=True, default=1)
+    password_hash = Column(String, nullable=True)
+
+
 class GoCardlessSettings(Base):
     """Single-row table for GoCardless API credentials and tokens."""
     __tablename__ = "gocardless_settings"
